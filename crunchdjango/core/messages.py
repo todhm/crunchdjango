@@ -1,0 +1,3 @@
+PERSONALIZE_ADD_ERROR='Unable to add personalize data'
+INVALID_TRANSACTION="INVALID_TRANSACTION"
+PERSONALIZE_GET_MODEL_ERROR='Unable to get recommended goods'

@@ -1,0 +1,95 @@
+version: '3.7'
+services:
+
+  crunchdjango:
+    image: fidelkang/crunchdjango
+    container_name: crunchdjango
+    build:
+      context: ./crunchdjango
+      dockerfile: Dockerfile
+    volumes:
+      - './crunchdjango:/usr/src/app'
+    command: python manage.py runserver 0.0.0.0:5000
+    ports:
+      - 5000:5000
+    env_file:
+      - ./envfiles/.djangoenv.env
+    networks:
+      - message
+      - backend
+      
+  redis:
+    container_name: redis
+    image: redis:4.0.11
+    networks:
+      - message
+  mongo:
+    container_name: mongo
+    image: mongo:4.1.7-xenial
+    ports:
+      - 27016:27017
+    volumes:
+      - mdb-data:/data/db
+      - ./mongo/datajson.json:/docker-entrypoint-initdb.d/datajson.json
+      - ./mongo/restore.sh:/docker-entrypoint-initdb.d/restore.sh
+    networks:
+      - backend
+
+  crunchdjango_worker:
+    image: fidelkang/crunchdjango
+    env_file:
+      - ./envfiles/.djangoenv.env
+    command: ["celery", "worker", "--app=worker.worker.app", "--concurrency=1","-Ofair", "--hostname=worker@%h", "--loglevel=INFO"]
+    volumes:
+      - './crunchdjango:/usr/src/app'
+    depends_on:
+      - redis
+
+    networks:
+      - backend
+      - message
+      
+  airflow:
+    image: fidelkang/airflow
+    build:
+      context: ./airflow/
+    container_name: airflow
+    restart: always
+    depends_on:
+      - postgres
+    env_file:
+      - ./envfiles/.airflow_development.env
+    volumes:
+      - ./airflow/dags:/usr/local/airflow/dags
+      - ./airflow/requirements.txt:/requirements.txt
+    ports:
+        - "8080:8080"
+    command: webserver
+    healthcheck:
+        test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+        interval: 30s
+        timeout: 30s
+        retries: 3
+    networks:
+      - backend
+      - airflow_backend
+
+  postgres:
+    image: postgres:9.6
+    env_file:
+      - ./envfiles/.airflow_development.env
+    networks:
+      - airflow_backend
+      - backend
+    ports:
+        - "5432:5432"
+
+
+volumes:
+  mdb-data:
+
+networks:
+  backend:
+  message:
+  airflow_backend:
+  
