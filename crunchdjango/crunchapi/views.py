@@ -195,6 +195,7 @@ class PersonalizeView(views.APIView):
         db_name =  settings.MONGODB_NAME
         data = request.data
         serializer_class = serializers.UserdataSerializer(data=data)
+        logger.error('in PersonalizeView')
         if serializer_class.is_valid(raise_exception=True):
             validated_data = serializer_class.validated_data
             if validated_data.get("ORIGINAL_USER_ID"):
@@ -205,21 +206,22 @@ class PersonalizeView(views.APIView):
 
             else:
                 client[db_name].personalize_table.insert_one(validated_data) 
-            if not settings.TESTING and os.environ.get("PERSONALIZE_ACCESS_KEY") \
-                and os.environ.get("PERSONALIZE_SECRET_KEY") and os.environ.get("PERSONALIZE_TRACKING_ID"):
-                personalize_key = os.environ['PERSONALIZE_ACCESS_KEY']
-                personalize_secret = os.environ['PERSONALIZE_SECRET_KEY']
-                tracking_id = os.environ['PERSONALIZE_TRACKING_ID']
-                personalize_client = boto3.client(
-                    'personalize-events',
-                    aws_access_key_id=personalize_key,
-                    aws_secret_access_key=personalize_secret,
-                    region_name='us-east-1'
-                )
-                try:
-                    result = add_recommendation_data(personalize_client,validated_data,tracking_id)
-                except:
-                    return Response(PERSONALIZE_ADD_ERROR, status=status.HTTP_400_BAD_REQUEST)
+        #     AMAZON PERSONALIZE
+        #     if not settings.TESTING and os.environ.get("PERSONALIZE_ACCESS_KEY") \
+        #         and os.environ.get("PERSONALIZE_SECRET_KEY") and os.environ.get("PERSONALIZE_TRACKING_ID"):
+        #         personalize_key = os.environ['PERSONALIZE_ACCESS_KEY']
+        #         personalize_secret = os.environ['PERSONALIZE_SECRET_KEY']
+        #         tracking_id = os.environ['PERSONALIZE_TRACKING_ID']
+        #         personalize_client = boto3.client(
+        #             'personalize-events',
+        #             aws_access_key_id=personalize_key,
+        #             aws_secret_access_key=personalize_secret,
+        #             region_name='us-east-1'
+        #         )
+        #         try:
+        #             result = add_recommendation_data(personalize_client,validated_data,tracking_id)
+        #         except:
+        #             return Response(PERSONALIZE_ADD_ERROR, status=status.HTTP_400_BAD_REQUEST)
         data = {}
         data['result'] = 'success'
         return Response(data, status=status.HTTP_201_CREATED)
@@ -234,6 +236,7 @@ class GetRecommendGoodsView(views.APIView):
         client = MongoClient(url)
         db_name =  settings.MONGODB_NAME
         user_id = self.kwargs.get("user_id")
+        item_id = self.kwargs.get("item_id")
         if not settings.TESTING and os.environ.get("PERSONALIZE_ACCESS_KEY") \
             and os.environ.get("PERSONALIZE_SECRET_KEY") and os.environ.get("PERSONALIZE_CAMPAIGN_MODEL"):
             personalize_key = os.environ['PERSONALIZE_ACCESS_KEY']
@@ -246,7 +249,7 @@ class GetRecommendGoodsView(views.APIView):
                 region_name='us-east-1'
             )
             try:
-                item_id_list = get_recommendation_goods(personalize_client,user_id,campaign_model)
+                item_id_list = get_recommendation_goods(personalize_client,user_id,item_id,campaign_model)
             except Exception as e:
                 return Response(PERSONALIZE_GET_MODEL_ERROR+str(e), status=status.HTTP_400_BAD_REQUEST)
         else:
