@@ -227,7 +227,6 @@ class PersonalizeView(views.APIView):
 
 
 
-
 class GetRecommendGoodsView(views.APIView):
 
     def get(self, request,**kwargs):
@@ -235,12 +234,14 @@ class GetRecommendGoodsView(views.APIView):
         client = MongoClient(url)
         db_name =  settings.MONGODB_NAME
         user_id = self.kwargs.get("user_id")
-        item_id = self.kwargs.get("item_id")
+        item_id = self.kwargs.get("item_id",'')
+        
+
         if not settings.TESTING and os.environ.get("PERSONALIZE_ACCESS_KEY") \
             and os.environ.get("PERSONALIZE_SECRET_KEY") and os.environ.get("PERSONALIZE_CAMPAIGN_MODEL"):
             personalize_key = os.environ['PERSONALIZE_ACCESS_KEY']
             personalize_secret = os.environ['PERSONALIZE_SECRET_KEY']
-            campaign_model = os.environ['PERSONALIZE_CAMPAIGN_MODEL']
+            campaign_model = os.environ['PERSONALIZE_ITEM_BASED_MODEL'] if item_id else os.environ['PERSONALIZE_CAMPAIGN_MODEL']
             personalize_client = boto3.client(
                 'personalize-runtime',
                 aws_access_key_id=personalize_key,
@@ -248,7 +249,7 @@ class GetRecommendGoodsView(views.APIView):
                 region_name='us-east-1'
             )
             try:
-                item_id_list = get_recommendation_goods(personalize_client,user_id,item_id,campaign_model)
+                item_id_list = get_recommendation_goods(personalize_client,user_id,campaign_model,item_id=item_id)
             except Exception as e:
                 return Response(PERSONALIZE_GET_MODEL_ERROR+str(e), status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -268,6 +269,7 @@ class GetRecommendGoodsView(views.APIView):
             results = []
     
         return Response(results)
+
 
 
 class AddUserView(views.APIView):
