@@ -14,6 +14,7 @@ services:
       - 5000:5000
     env_file:
       - ./envfiles/.djangoenv.env
+      - ./envfiles/.secret.env
     networks:
       - message
       - backend

@@ -195,7 +195,6 @@ class PersonalizeView(views.APIView):
         db_name =  settings.MONGODB_NAME
         data = request.data
         serializer_class = serializers.UserdataSerializer(data=data)
-        logger.error('in PersonalizeView')
         if serializer_class.is_valid(raise_exception=True):
             validated_data = serializer_class.validated_data
             if validated_data.get("ORIGINAL_USER_ID"):
